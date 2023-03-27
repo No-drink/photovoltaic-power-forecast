@@ -1,24 +1,34 @@
-﻿# 导入pykrige模块
-import pykrige as pk
+﻿import pandas as pd
+from pykrige.ok import OrdinaryKriging
 import numpy as np
 
-# 假设你有一些2D数据，例如温度或高度
-x = [1.0, 2.0, 3.0, 4.0] # x坐标
-y = [1.0, 2.0, 3.0, 4.0] # y坐标
-z = [10.0, 20.0, 30.0, 40.0] # 数据值
+# Read the CSV file and select only rows 2 to 7899 (0-based index)
+df = pd.read_csv('weather_data.csv', skiprows=range(1, 2), nrows=7898)
 
-# 创建一个普通克里金对象
-OK = pk.OrdinaryKriging(x,y,z)
+# Extract the latitude, longitude, and temperature columns
+latitudes = df['lat'].values
+longitudes = df['lon'].values
+temperatures = df['2021-12-01 08:00:00'].values  # Temperature at time T1
 
-# 指定一个网格来进行插值，例如5x5的网格
-gridx = np.linspace(1.0,4.0,num=5)
-gridy = np.linspace(1.0,4.0,num=5)
+# Perform Kriging interpolation on temperature data at time T1
+ok = OrdinaryKriging(
+    longitudes, latitudes, temperatures, variogram_model='linear',
+    verbose=False, enable_plotting=False
+)
 
-# 调用execute方法来进行插值，并得到插值结果和方差估计
-z_ok,var_ok = OK.execute('grid',gridx,gridy)
+# Create a grid for interpolation
+grid_lon = np.linspace(min(longitudes), max(longitudes), 100)
+grid_lat = np.linspace(min(latitudes), max(latitudes), 100)
 
-# 创建一个通用克里金对象，指定趋势模型为线性（ax+by+c）
-UK = pk.UniversalKriging(x,y,z,trend='linear')
+# Get interpolated values on the grid
+z, ss = ok.execute('grid', grid_lon, grid_lat)
 
-# 调用execute方法来进行插值，并得到插值结果和方差估计
-z_uk,var_uk = UK.execute('grid',gridx,gridy)
+# Time series interpolation
+# Select columns with time series data (starting from column D)
+time_series_df = df.iloc[:, 3:]
+
+# Perform time series interpolation (e.g., linear interpolation)
+interpolated_time_series_df = time_series_df.interpolate(method='linear')
+
+# Save the interpolated time series data to a new CSV file
+interpolated_time_series_df.to_csv('interpolated_time_series.csv', index=False)
