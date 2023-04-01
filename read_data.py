@@ -22,36 +22,35 @@ def datainform(file_name):
     endtime = pd.to_datetime(endtime)
     return [starttime,endtime]
 
-def read_all(folder_path, df):
-    file_list = os.listdir(folder_path)
-    for file in file_list:
+file_list = os.listdir(folder_path)
+for file in file_list:
+    if file.endswith(".nc"):
         file2read = netCDF4.Dataset(f"{folder_path}/{file}", "r") # Open the file in read mode
+        starttime = datainform(file)[0]
         endtime = datainform(file)[1]
-        datas_in = []
-        for TEM in file2read.variables['TEM'][:].data:
-            datas_in.extend(TEM)
-        for PRE_1h in file2read.variables['PRE_1h'][:].data:
-            datas_in.extend(PRE_1h)
-        for RHU in file2read.variables['RHU'][:].data:
-            datas_in.extend(RHU)
-        for WD in file2read.variables['WD'][:].data:
-            datas_in.extend(WD)
-        for WS in file2read.variables['WS'][:].data:
-            datas_in.extend(WS)
-        for SR in file2read.variables['SR'][:].data:
-            datas_in.extend(SR)
-        for TCC in file2read.variables['TCC'][:].data:
-            datas_in.extend(TCC)
-        df.loc[:,endtime] = datas_in
-    return True
+        start_of_year = pd.Timestamp(year=endtime.year, month=1, day=1, hour=0, minute=0, second=0)
 
-# Generate the index
-file_example = netCDF4.Dataset(f"./data/given_data/JTBZDB1D_yb_gdfs-meter_3d2.5km15min_202111301200_202112010800.nc", "r") # Open the file in read mode
-lats = file_example.variables['lat'][:].data
-lons = file_example.variables['lon'][:].data
-categories = ['TEM','PRE_1h','RHU','WD','WS','SR','TCC']
-index = pd.MultiIndex.from_product([categories, lats, lons], names=['category', 'lat', 'lon'])
-weather_data = pd.DataFrame(index=index)
+        # 计算endtime与该年1月1日零点之间的时间差，并将其转换为小时数
+        hours_since_start_of_year = (endtime - start_of_year) / pd.Timedelta(hours=1)
+        duration = (endtime - starttime) / pd.Timedelta(hours=1)
 
-if (read_all(folder_path, weather_data)):
-    weather_data.to_csv('weather_data.csv', index=True, header=True)
+        dtm = re.findall(r"km(.+?).nc", file)[0]
+        period, starttime, endtime = re.findall(r"(\d+)", dtm)
+
+        lats = file2read.variables['lat'][:].data
+        lons = file2read.variables['lon'][:].data
+        index = pd.MultiIndex.from_product([lats, lons], names=['lat', 'lon'])
+        weather_data = pd.DataFrame(index=index)
+        weather_data["TIME"] = hours_since_start_of_year
+        weather_data["DUA"] = duration
+        
+        weather_data["TEM"] = [item for sublist in file2read.variables['TEM'][:].data for item in sublist]
+        weather_data["PRE_1h"] = [item for sublist in file2read.variables['PRE_1h'][:].data for item in sublist]
+        weather_data["RHU"] = [item for sublist in file2read.variables['RHU'][:].data for item in sublist]
+        weather_data["WD"] = [item for sublist in file2read.variables['WD'][:].data for item in sublist]
+        weather_data["WS"] = [item for sublist in file2read.variables['WS'][:].data for item in sublist]
+        weather_data["SR"] = [item for sublist in file2read.variables['SR'][:].data for item in sublist]
+        weather_data["TCC"] = [item for sublist in file2read.variables['TCC'][:].data for item in sublist]
+        weather_data.to_csv(f'{folder_path}/{endtime}_{int(duration)}.csv', index=True, header=True)
+    else:
+        continue
