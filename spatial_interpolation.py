@@ -27,23 +27,23 @@ for file in os.listdir(folder_path):
         for group_name, group_data in data.groupby(data.columns[1]):   
             # create an empty dataframe to store the data
             df = pd.DataFrame()  
-            lon = (group_data.iloc[:, 3] + group_data.iloc[:, 4]) / 2
-            lat = (group_data.iloc[:, 5] + group_data.iloc[:, 6]) / 2
+            lon = (group_data.iloc[:, 5] + group_data.iloc[:, 6]) / 2
+            lat = (group_data.iloc[:, 3] + group_data.iloc[:, 4]) / 2
             fdl = group_data.iloc[:, 9] / 100
             df = df.append(pd.DataFrame({'lat': lat, 'lon': lon, 'fdl': fdl}))
             # save the dataframe as a csv file with the filename as group_name + 'before'
             df.to_csv(f"{group_name}_before.csv")
 
             # create a 2D grid of points using numpy.meshgrid
-            lon_grid = np.arange(118.25, 120.125, 0.025)
-            lat_grid = np.arange(36.125, 37.125, 0.025)
+            lon_grid = np.arange(118.125, 120.125, 0.025)
+            lat_grid = np.arange(35.625, 37.375, 0.025)
             
             # create an instance of the Inverse Distance Weighting class
             xgrid, ygrid = np.meshgrid(lon_grid, lat_grid)
             print(df['lon'], df['lat'], df['fdl'])
             fdl_interp = idw_interpolation(df['lon'], df['lat'], df['fdl'], xgrid.flatten(), ygrid.flatten(), power=2)
             
-            df_grid = pd.DataFrame(dict(long=xgrid.flatten(),lat=ygrid.flatten()))
+            df_grid = pd.DataFrame(dict(lat=ygrid.flatten(),lon=xgrid.flatten()))
             df_grid["IDW"] = fdl_interp
             
             df_grid.to_csv(f"{group_name}_after.csv")
