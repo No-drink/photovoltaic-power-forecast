@@ -1,9 +1,21 @@
 ﻿import pandas as pd
-from pykrige.ok import OrdinaryKriging
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import os
+from scipy.spatial.distance import cdist
+
+def idw_interpolation(x, y, z, xi, yi, power=100):
+    """Inverse Distance Weighting interpolation."""
+    # Compute distance matrix
+    dist_matrix = cdist(np.column_stack((x, y)), np.column_stack((xi, yi)), metric='euclidean')
+    # Avoid division by zero
+    dist_matrix[dist_matrix == 0] = 0.000001
+    # Compute weights
+    weights = 1 / (dist_matrix ** power)
+    # Compute weighted average
+    zi = np.sum(weights * z[:, np.newaxis], axis=0) / np.sum(weights, axis=0)
+    return zi
 
 folder_path = "./data/21_12"
 # loop through all excel files in the folder and append data to the dataframe
@@ -26,22 +38,12 @@ for file in os.listdir(folder_path):
             lon_grid = np.arange(118.25, 120.125, 0.025)
             lat_grid = np.arange(36.125, 37.125, 0.025)
             
-            # create an instance of the OrdinaryKriging class
-            OK = OrdinaryKriging(df['lon'], df['lat'], df['fdl'], variogram_model='linear', verbose=False, enable_plotting=False)
-            
-            # interpolate the data using the grid of points
-            fdl_interp, sigmas = OK.execute('grid', lon_grid, lat_grid)
-            
-            # reshape the interpolated data to match the shape of the grid
-            # fdl_interp = fdl_interp.reshape(lon_grid.shape)
-            
+            # create an instance of the Inverse Distance Weighting class
             xgrid, ygrid = np.meshgrid(lon_grid, lat_grid)
+            print(df['lon'], df['lat'], df['fdl'])
+            fdl_interp = idw_interpolation(df['lon'], df['lat'], df['fdl'], xgrid.flatten(), ygrid.flatten(), power=2)
+            
             df_grid = pd.DataFrame(dict(long=xgrid.flatten(),lat=ygrid.flatten()))
-            df_grid["Krig_gaussian"] = fdl_interp.flatten()
+            df_grid["IDW"] = fdl_interp
             
-            # # create a new dataframe to store the interpolated data
-            # df_interp = pd.DataFrame({'lat': lat_grid.flatten(), 'lon': lon_grid.flatten(), 'fdl_interp': fdl_interp.flatten()})
-            
-            # merge the original dataframe with the interpolated dataframe based on the lat and lon columns
-            # df = pd.merge(df, df_interp, on=['lat', 'lon'], how='outer')
             df_grid.to_csv(f"{group_name}_after.csv")
