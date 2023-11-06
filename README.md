@@ -1,4 +1,4 @@
-# photovoltaic-power-forecast
+# Photovoltaic power forecast
 Photovoltaic power generation forecasting using artificial intelligence algorithms.
 This is a **Final Year Project**. Using ANN and Random Forest modules to forecast power generation. Only critical codes were uploaded.
 ## Innovation
