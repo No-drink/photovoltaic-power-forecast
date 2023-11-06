@@ -83,6 +83,6 @@ def fit_fourier_series(data, num_terms, predict_hours):
 # 预测时刻（小时数）列表
 predict_hours = np.linspace(0, 8760*2, 35040)  # 在0到48小时之间均匀取
 
-predict_temp = fit_fourier_series(result_df, 45, predict_hours)
+predict_temp = fit_fourier_series(result_df, 50, predict_hours)
 
 print(predict_temp)
